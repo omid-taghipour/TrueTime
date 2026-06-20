@@ -7,7 +7,14 @@
     "type": "git",
     "url": "https://github.com/omid-taghipour/TrueTime.git"
   },
-  "keywords": ["tauri", "react", "typescript", "stopwatch", "desktop-app", "cross-platform"],
+  "keywords": [
+    "tauri",
+    "react",
+    "typescript",
+    "stopwatch",
+    "desktop-app",
+    "cross-platform"
+  ],
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -17,7 +24,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "bump-version": "node scripts/bump-version.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",

@@ -59,6 +59,19 @@ npm run test:watch
 
 Covers the time-math and mutual-exclusion logic in `useStopwatches` and the `formatTime` formatter.
 
+### Cutting a release
+
+The version number is duplicated across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`. Don't edit them by hand — use the bump script, which updates all three plus the lockfiles:
+
+```sh
+npm run bump-version -- 1.1.0
+git add -A
+git commit -m "Bump version to 1.1.0"
+git tag v1.1.0
+git push origin <branch>   # open a PR — main is protected, no direct pushes
+git push origin v1.1.0     # after the PR merges, triggers the release workflow
+```
+
 ## Tech stack
 
 - [Tauri v2](https://tauri.app) — native shell, packaging, and installers
