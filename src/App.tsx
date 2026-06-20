@@ -1,6 +1,7 @@
 import { useStopwatches } from './hooks/useStopwatches';
 import { CreateStopwatchForm } from './components/CreateStopwatchForm';
 import { StopwatchList } from './components/StopwatchList';
+import { UpdateBanner } from './components/UpdateBanner';
 
 export default function App() {
   const {
@@ -20,6 +21,7 @@ export default function App() {
         <p className="mt-1 text-sm text-slate-500">Only one stopwatch can run at a time.</p>
 
         <div className="mt-6">
+          <UpdateBanner />
           <CreateStopwatchForm onCreate={createStopwatch} />
         </div>
 
