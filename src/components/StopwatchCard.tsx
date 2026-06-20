@@ -22,6 +22,7 @@ export function StopwatchCard({
 }: StopwatchCardProps) {
   const elapsed = useLiveElapsed(stopwatch);
   const [isEditing, setIsEditing] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [draftName, setDraftName] = useState(stopwatch.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,43 +43,63 @@ export function StopwatchCard({
         isRunning ? 'border-indigo-500/60 bg-indigo-500/5' : 'border-slate-800 bg-slate-900'
       }`}
     >
-      <div className="flex items-center gap-2">
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitRename();
-              if (e.key === 'Escape') {
-                setDraftName(stopwatch.name);
-                setIsEditing(false);
-              }
+      {isConfirmingDelete ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-sm text-slate-300">Delete &ldquo;{stopwatch.name}&rdquo;?</span>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => setIsConfirmingDelete(false)}
+              className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onDelete(stopwatch.id)}
+              className="rounded-md bg-red-500/90 px-2.5 py-1 text-xs font-medium text-slate-950 transition-colors hover:bg-red-400"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitRename();
+                if (e.key === 'Escape') {
+                  setDraftName(stopwatch.name);
+                  setIsEditing(false);
+                }
+              }}
+              className="flex-1 rounded-md bg-slate-800 px-2 py-1 text-sm font-medium text-slate-100 outline-none ring-1 ring-indigo-500"
+            />
+          ) : (
+            <h3 className="flex-1 truncate text-sm font-medium text-slate-200">{stopwatch.name}</h3>
+          )}
+          <button
+            onClick={() => {
+              setDraftName(stopwatch.name);
+              setIsEditing((prev) => !prev);
             }}
-            className="flex-1 rounded-md bg-slate-800 px-2 py-1 text-sm font-medium text-slate-100 outline-none ring-1 ring-indigo-500"
-          />
-        ) : (
-          <h3 className="flex-1 truncate text-sm font-medium text-slate-200">{stopwatch.name}</h3>
-        )}
-        <button
-          onClick={() => {
-            setDraftName(stopwatch.name);
-            setIsEditing((prev) => !prev);
-          }}
-          aria-label="Rename stopwatch"
-          className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
-        >
-          <PencilIcon />
-        </button>
-        <button
-          onClick={() => onDelete(stopwatch.id)}
-          aria-label="Delete stopwatch"
-          className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-        >
-          <TrashIcon />
-        </button>
-      </div>
+            aria-label="Rename stopwatch"
+            className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+          >
+            <PencilIcon />
+          </button>
+          <button
+            onClick={() => setIsConfirmingDelete(true)}
+            aria-label="Delete stopwatch"
+            className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      )}
 
       <p
         className={`mt-3 font-mono text-3xl tabular-nums ${
