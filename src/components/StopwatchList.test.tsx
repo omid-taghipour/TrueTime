@@ -15,17 +15,21 @@ function makeStopwatch(overrides: Partial<Stopwatch> = {}): Stopwatch {
   };
 }
 
-function renderList(stopwatches: Stopwatch[]) {
-  return render(
-    <StopwatchList
-      stopwatches={stopwatches}
-      onStart={vi.fn()}
-      onPause={vi.fn()}
-      onReset={vi.fn()}
-      onDelete={vi.fn()}
-      onRename={vi.fn()}
-    />
-  );
+function handlers() {
+  return {
+    onStart: vi.fn(),
+    onPause: vi.fn(),
+    onReset: vi.fn(),
+    onDelete: vi.fn(),
+    onRename: vi.fn(),
+    onClearAll: vi.fn(),
+  };
+}
+
+function renderList(stopwatches: Stopwatch[], overrides: Partial<ReturnType<typeof handlers>> = {}) {
+  const props = { ...handlers(), ...overrides };
+  const result = render(<StopwatchList stopwatches={stopwatches} {...props} />);
+  return { ...result, props };
 }
 
 function names() {
@@ -76,42 +80,23 @@ describe('StopwatchList sort strategy selector', () => {
   });
 
   it('hides the selector with 0 or 1 stopwatches and shows it with 2+', () => {
-    const { rerender } = renderList([]);
+    const { rerender, props } = renderList([]);
+    expect(screen.queryByLabelText('Sort by')).not.toBeInTheDocument();
+
+    rerender(<StopwatchList stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' })]} {...props} />);
     expect(screen.queryByLabelText('Sort by')).not.toBeInTheDocument();
 
     rerender(
       <StopwatchList
-        stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' })]}
-        onStart={vi.fn()}
-        onPause={vi.fn()}
-        onReset={vi.fn()}
-        onDelete={vi.fn()}
-        onRename={vi.fn()}
-      />
-    );
-    expect(screen.queryByLabelText('Sort by')).not.toBeInTheDocument();
-
-    rerender(
-      <StopwatchList
-        stopwatches={[
-          makeStopwatch({ id: 'a', name: 'Alpha' }),
-          makeStopwatch({ id: 'b', name: 'Beta' }),
-        ]}
-        onStart={vi.fn()}
-        onPause={vi.fn()}
-        onReset={vi.fn()}
-        onDelete={vi.fn()}
-        onRename={vi.fn()}
+        stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]}
+        {...props}
       />
     );
     expect(screen.getByLabelText('Sort by')).toBeInTheDocument();
   });
 
   it('defaults to the "recent" strategy', () => {
-    renderList([
-      makeStopwatch({ id: 'a', name: 'Alpha' }),
-      makeStopwatch({ id: 'b', name: 'Beta' }),
-    ]);
+    renderList([makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]);
 
     expect(screen.getByLabelText('Sort by')).toHaveValue('recent');
   });
@@ -153,13 +138,72 @@ describe('StopwatchList sort strategy selector', () => {
   });
 
   it('persists the chosen strategy to localStorage', () => {
-    renderList([
-      makeStopwatch({ id: 'a', name: 'Alpha' }),
-      makeStopwatch({ id: 'b', name: 'Beta' }),
-    ]);
+    renderList([makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]);
 
     fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'name' } });
 
     expect(localStorage.getItem('sortStrategy')).toBe('name');
+  });
+});
+
+describe('StopwatchList clear all', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('hides the "Clear all" button with 0 or 1 stopwatches and shows it with 2+', () => {
+    const { rerender, props } = renderList([]);
+    expect(screen.queryByText('Clear all')).not.toBeInTheDocument();
+
+    rerender(<StopwatchList stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' })]} {...props} />);
+    expect(screen.queryByText('Clear all')).not.toBeInTheDocument();
+
+    rerender(
+      <StopwatchList
+        stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]}
+        {...props}
+      />
+    );
+    expect(screen.getByText('Clear all')).toBeInTheDocument();
+  });
+
+  it('does not clear immediately and shows a confirmation with the exact count', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta' }),
+      makeStopwatch({ id: 'c', name: 'Gamma' }),
+    ]);
+
+    fireEvent.click(screen.getByText('Clear all'));
+
+    expect(props.onClearAll).not.toHaveBeenCalled();
+    expect(screen.getByText('Delete all 3 stopwatches?')).toBeInTheDocument();
+  });
+
+  it('cancels back to the normal view without clearing', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta' }),
+    ]);
+
+    fireEvent.click(screen.getByText('Clear all'));
+    fireEvent.click(screen.getByText('Cancel'));
+
+    expect(props.onClearAll).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Delete all/)).not.toBeInTheDocument();
+    expect(screen.getByText('Clear all')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sort by')).toBeInTheDocument();
+  });
+
+  it('clears only after confirming', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta' }),
+    ]);
+
+    fireEvent.click(screen.getByText('Clear all'));
+    fireEvent.click(screen.getByText('Delete all'));
+
+    expect(props.onClearAll).toHaveBeenCalledTimes(1);
   });
 });

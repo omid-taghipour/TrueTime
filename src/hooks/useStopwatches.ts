@@ -105,6 +105,10 @@ export function useStopwatches() {
     setStopwatches((prev) => prev.filter((sw) => sw.id !== id));
   }, []);
 
+  const clearAllStopwatches = useCallback(() => {
+    setStopwatches([]);
+  }, []);
+
   return {
     stopwatches,
     createStopwatch,
@@ -113,5 +117,6 @@ export function useStopwatches() {
     pauseStopwatch,
     resetStopwatch,
     deleteStopwatch,
+    clearAllStopwatches,
   };
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { useSortStrategy, type SortStrategy } from '../hooks/useSortStrategy';
 import { StopwatchCard } from './StopwatchCard';
@@ -9,6 +10,7 @@ interface StopwatchListProps {
   onReset: (id: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  onClearAll: () => void;
 }
 
 interface IndexedStopwatch {
@@ -35,8 +37,10 @@ export function StopwatchList({
   onReset,
   onDelete,
   onRename,
+  onClearAll,
 }: StopwatchListProps) {
   const { sortStrategy, setSortStrategy } = useSortStrategy();
+  const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
 
   if (stopwatches.length === 0) {
     return (
@@ -63,20 +67,55 @@ export function StopwatchList({
   return (
     <div className="mt-4">
       {stopwatches.length > 1 && (
-        <div className="mb-2 flex items-center justify-end gap-2">
-          <label htmlFor="sort-strategy" className="text-xs text-slate-500">
-            Sort by
-          </label>
-          <select
-            id="sort-strategy"
-            value={sortStrategy}
-            onChange={(e) => setSortStrategy(e.target.value as SortStrategy)}
-            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none transition-shadow focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-          >
-            <option value="recent">Recently used</option>
-            <option value="created">Date created</option>
-            <option value="name">Name (A&ndash;Z)</option>
-          </select>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          {isConfirmingClearAll ? (
+            <>
+              <span className="truncate text-xs text-slate-600 dark:text-slate-300">
+                Delete all {stopwatches.length} stopwatches?
+              </span>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setIsConfirmingClearAll(false)}
+                  className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onClearAll();
+                    setIsConfirmingClearAll(false);
+                  }}
+                  className="rounded-md bg-red-500/90 px-2.5 py-1 text-xs font-medium text-slate-950 transition-colors hover:bg-red-400"
+                >
+                  Delete all
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsConfirmingClearAll(true)}
+                className="text-xs text-slate-500 transition-colors hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+              >
+                Clear all
+              </button>
+              <div className="flex items-center gap-2">
+                <label htmlFor="sort-strategy" className="text-xs text-slate-500">
+                  Sort by
+                </label>
+                <select
+                  id="sort-strategy"
+                  value={sortStrategy}
+                  onChange={(e) => setSortStrategy(e.target.value as SortStrategy)}
+                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none transition-shadow focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <option value="recent">Recently used</option>
+                  <option value="created">Date created</option>
+                  <option value="name">Name (A&ndash;Z)</option>
+                </select>
+              </div>
+            </>
+          )}
         </div>
       )}
 

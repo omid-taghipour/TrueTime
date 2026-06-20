@@ -13,6 +13,7 @@ export default function App() {
     pauseStopwatch,
     resetStopwatch,
     deleteStopwatch,
+    clearAllStopwatches,
   } = useStopwatches();
 
   return (
@@ -38,6 +39,7 @@ export default function App() {
           onReset={resetStopwatch}
           onDelete={deleteStopwatch}
           onRename={renameStopwatch}
+          onClearAll={clearAllStopwatches}
         />
       </div>
     </main>
