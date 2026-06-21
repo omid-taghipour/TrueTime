@@ -3,7 +3,7 @@
 A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://tauri.app), React, and TypeScript. The name reflects its core guarantee: elapsed time is always derived from real timestamps, never a drifting interval — so it's exactly correct even after a crash or restart.
 
 - Run multiple named stopwatches — only one can run at a time. Starting one instantly pauses whichever other one is running, capturing its elapsed time to the millisecond.
-- Time is displayed as `HH:MM:SS.mmm`.
+- Time is displayed as `HH:MM:SS`.
 - State persists across app restarts and crashes: elapsed time is computed from timestamps, not a background timer, so a running stopwatch resumes exactly where it should be when you reopen the app.
 - Checks for updates on launch and offers to download, install, and restart in place.
 
@@ -87,7 +87,7 @@ src/
   types/stopwatch.ts        Stopwatch data model
   hooks/useStopwatches.ts   persisted state + time-math + mutual exclusion
   hooks/useLiveElapsed.ts   per-card live ticking display
-  lib/formatTime.ts         HH:MM:SS.mmm formatter
+  lib/formatTime.ts         HH:MM:SS formatter
   components/               UI: list, card, create form
 src-tauri/                  Rust/Tauri native shell
 .github/workflows/          CI: cross-platform release builds
