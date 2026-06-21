@@ -90,7 +90,7 @@ src/
   lib/formatTime.ts         HH:MM:SS formatter
   components/               UI: list, card, create form
 src-tauri/                  Rust/Tauri native shell
-.github/workflows/          CI: cross-platform release builds
+.github/workflows/          cross-platform release builds (on version tags)
 ```
 
 ## Contributing
