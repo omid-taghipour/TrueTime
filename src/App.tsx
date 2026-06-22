@@ -1,5 +1,6 @@
 import { useStopwatches } from './hooks/useStopwatches';
 import { CreateStopwatchForm } from './components/CreateStopwatchForm';
+import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { StopwatchList } from './components/StopwatchList';
 import { ThemeToggle } from './components/ThemeToggle';
 import { UpdateBanner } from './components/UpdateBanner';
@@ -26,7 +27,10 @@ export default function App() {
             </h1>
             <p className="mt-1 text-sm text-slate-500">Only one stopwatch can run at a time.</p>
           </div>
-          <ThemeToggle />
+          <div className="flex shrink-0 items-start gap-2">
+            <KeyboardShortcutsHelp />
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="mt-6">

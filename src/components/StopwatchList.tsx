@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { useSortStrategy, type SortStrategy } from '../hooks/useSortStrategy';
+import { isDialogOpen } from '../lib/isDialogOpen';
+import { isTypingTarget } from '../lib/isTypingTarget';
 import { StopwatchCard } from './StopwatchCard';
 
 interface StopwatchListProps {
@@ -42,14 +44,7 @@ export function StopwatchList({
   const { sortStrategy, setSortStrategy } = useSortStrategy();
   const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  if (stopwatches.length === 0) {
-    return (
-      <p className="mt-10 text-center text-sm text-slate-500">
-        No stopwatches yet. Create one above to get started.
-      </p>
-    );
-  }
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // createdIndex is captured against the full, unfiltered list up front so
   // the "Date created" strategy stays correct even once search narrows it.
@@ -72,16 +67,60 @@ export function StopwatchList({
     })
     .map((entry) => entry.stopwatch);
 
+  // Keyboard shortcuts read through this ref so the listener can be
+  // registered once on mount instead of resubscribing on every render.
+  const latestRef = useRef({ ordered, onStart, onPause });
+  latestRef.current = { ordered, onStart, onPause };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isTypingTarget(event.target) || isDialogOpen()) return;
+
+      if (event.key === '/') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault();
+        const { ordered, onStart, onPause } = latestRef.current;
+        const top = ordered[0];
+        if (!top) return;
+        if (top.status === 'running') onPause(top.id);
+        else onStart(top.id);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  if (stopwatches.length === 0) {
+    return (
+      <p className="mt-10 text-center text-sm text-slate-500">
+        No stopwatches yet. Create one above to get started.
+      </p>
+    );
+  }
+
   return (
     <div className="mt-4">
       {stopwatches.length > 1 && (
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-100/60 p-2.5 dark:border-slate-800 dark:bg-slate-900/60">
           <div className="relative">
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search stopwatches..."
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('');
+                  searchInputRef.current?.blur();
+                }
+              }}
+              placeholder="Search stopwatches... (/)"
               aria-label="Search stopwatches"
               className="w-full rounded-lg bg-white px-3 py-2 pr-8 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-1 ring-slate-200 transition-shadow focus:ring-2 focus:ring-teal-500 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:ring-slate-700"
             />

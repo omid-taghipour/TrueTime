@@ -305,3 +305,120 @@ describe('StopwatchList search', () => {
     expect(names()).toEqual(['Zeta Run', 'Alpha Run']);
   });
 });
+
+describe('StopwatchList keyboard shortcuts', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('focuses the search box when "/" is pressed outside of any text field', () => {
+    renderList([makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]);
+
+    const search = screen.getByLabelText('Search stopwatches');
+    expect(search).not.toHaveFocus();
+
+    fireEvent.keyDown(window, { key: '/' });
+
+    expect(search).toHaveFocus();
+  });
+
+  it('does not hijack "/" or Space while a dialog (e.g. the shortcuts help) is open', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha', lastActiveAt: 1_000 }),
+      makeStopwatch({ id: 'b', name: 'Beta', lastActiveAt: 2_000 }),
+    ]);
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    document.body.appendChild(dialog);
+
+    const search = screen.getByLabelText('Search stopwatches');
+    fireEvent.keyDown(window, { key: '/' });
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(search).not.toHaveFocus();
+    expect(props.onStart).not.toHaveBeenCalled();
+    expect(props.onPause).not.toHaveBeenCalled();
+    document.body.removeChild(dialog);
+  });
+
+  it('does not hijack "/" while the user is already typing in a field', () => {
+    render(
+      <div>
+        <input data-testid="other-field" />
+        <StopwatchList
+          stopwatches={[makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]}
+          {...handlers()}
+        />
+      </div>
+    );
+
+    const otherField = screen.getByTestId('other-field');
+    otherField.focus();
+    fireEvent.keyDown(otherField, { key: '/' });
+
+    expect(otherField).toHaveFocus();
+    expect(screen.getByLabelText('Search stopwatches')).not.toHaveFocus();
+  });
+
+  it('clears the search query and blurs on Escape', () => {
+    renderList([makeStopwatch({ id: 'a', name: 'Alpha' }), makeStopwatch({ id: 'b', name: 'Beta' })]);
+
+    const search = screen.getByLabelText('Search stopwatches');
+    fireEvent.change(search, { target: { value: 'alpha' } });
+    expect(names()).toEqual(['Alpha']);
+
+    fireEvent.keyDown(search, { key: 'Escape' });
+
+    expect(search).toHaveValue('');
+    expect(search).not.toHaveFocus();
+    expect(names()).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('pauses the running stopwatch on Space, since it is always on top', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta', status: 'running', lastStartedTimestamp: Date.now() }),
+    ]);
+
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(props.onPause).toHaveBeenCalledWith('b');
+    expect(props.onStart).not.toHaveBeenCalled();
+  });
+
+  it('starts the topmost stopwatch on Space when nothing is running', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha', lastActiveAt: 1_000 }),
+      makeStopwatch({ id: 'b', name: 'Beta', lastActiveAt: 2_000 }),
+    ]);
+
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(props.onStart).toHaveBeenCalledWith('b');
+  });
+
+  it('does not toggle on Space while the user is typing in a field', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta' }),
+    ]);
+
+    fireEvent.keyDown(screen.getByLabelText('Search stopwatches'), { key: ' ' });
+
+    expect(props.onStart).not.toHaveBeenCalled();
+    expect(props.onPause).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on Space when search has filtered out every stopwatch', () => {
+    const { props } = renderList([
+      makeStopwatch({ id: 'a', name: 'Alpha' }),
+      makeStopwatch({ id: 'b', name: 'Beta' }),
+    ]);
+
+    fireEvent.change(screen.getByLabelText('Search stopwatches'), { target: { value: 'zzz' } });
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(props.onStart).not.toHaveBeenCalled();
+    expect(props.onPause).not.toHaveBeenCalled();
+  });
+});
