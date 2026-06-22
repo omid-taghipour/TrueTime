@@ -3,7 +3,6 @@ import { CreateStopwatchForm } from './components/CreateStopwatchForm';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { StopwatchList } from './components/StopwatchList';
 import { ThemeToggle } from './components/ThemeToggle';
-import { UpdateBanner } from './components/UpdateBanner';
 
 export default function App() {
   const {
@@ -34,7 +33,6 @@ export default function App() {
         </div>
 
         <div className="mt-6">
-          <UpdateBanner />
           <CreateStopwatchForm onCreate={createStopwatch} />
         </div>
 
