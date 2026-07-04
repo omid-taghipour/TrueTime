@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { formatTime } from '../lib/formatTime';
 import { useLiveElapsed } from '../hooks/useLiveElapsed';
+import { useShowMilliseconds } from '../hooks/useShowMilliseconds';
 
 interface StopwatchCardProps {
   stopwatch: Stopwatch;
@@ -21,6 +22,7 @@ export function StopwatchCard({
   onRename,
 }: StopwatchCardProps) {
   const elapsed = useLiveElapsed(stopwatch);
+  const { showMs } = useShowMilliseconds();
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [draftName, setDraftName] = useState(stopwatch.name);
@@ -112,7 +114,7 @@ export function StopwatchCard({
           isRunning ? 'text-teal-600 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
         }`}
       >
-        {formatTime(elapsed)}
+        {formatTime(elapsed, showMs)}
       </p>
 
       <div className="mt-4 flex gap-2">
