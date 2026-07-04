@@ -1,8 +1,8 @@
 import { useStopwatches } from './hooks/useStopwatches';
 import { CreateStopwatchForm } from './components/CreateStopwatchForm';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
+import { SettingsPanel } from './components/SettingsPanel';
 import { StopwatchList } from './components/StopwatchList';
-import { ThemeToggle } from './components/ThemeToggle';
 
 export default function App() {
   const {
@@ -28,7 +28,7 @@ export default function App() {
           </div>
           <div className="flex shrink-0 items-start gap-2">
             <KeyboardShortcutsHelp />
-            <ThemeToggle />
+            <SettingsPanel />
           </div>
         </div>
 
