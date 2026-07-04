@@ -3,6 +3,8 @@ import { CreateStopwatchForm } from './components/CreateStopwatchForm';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { SettingsPanel } from './components/SettingsPanel';
 import { StopwatchList } from './components/StopwatchList';
+import logoLight from '../assets/logo-lockup.svg';
+import logoDark from '../assets/logo-lockup-dark.svg';
 
 export default function App() {
   const {
@@ -21,8 +23,9 @@ export default function App() {
       <div className="mx-auto max-w-md">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              True<span className="text-teal-500 dark:text-teal-400">Time</span>
+            <h1>
+              <img src={logoLight} alt="TrueTime" className="block h-9 dark:hidden" />
+              <img src={logoDark} alt="TrueTime" className="hidden h-9 dark:block" />
             </h1>
             <p className="mt-1 text-sm text-slate-500">Only one stopwatch can run at a time.</p>
           </div>
