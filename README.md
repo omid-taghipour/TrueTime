@@ -24,7 +24,7 @@ The native desktop app is the primary way to use TrueTime, but the same UI can a
 docker compose up -d
 ```
 
-Then open `http://localhost:8080`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You redeploy a new version by rebuilding the image. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
+Then open `http://localhost:5001`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You redeploy a new version by rebuilding the image. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
 
 ## Development
 
