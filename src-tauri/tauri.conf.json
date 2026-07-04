@@ -13,7 +13,6 @@
     "windows": [
       {
         "title": "TrueTime",
-        "icon": "icons/icon.ico",
         "width": 420,
         "height": 680,
         "minWidth": 360,
