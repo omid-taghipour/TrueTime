@@ -3,8 +3,10 @@
 A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://tauri.app), React, and TypeScript. The name reflects its core guarantee: elapsed time is always derived from real timestamps, never a drifting interval — so it's exactly correct even after a crash or restart.
 
 - Run multiple named stopwatches — only one can run at a time. Starting one instantly pauses whichever other one is running, capturing its elapsed time to the millisecond.
-- Time is displayed as `HH:MM:SS`.
+- Time is displayed as `HH:MM:SS`, with an optional milliseconds readout.
 - State persists across app restarts and crashes: elapsed time is computed from timestamps, not a background timer, so a running stopwatch resumes exactly where it should be when you reopen the app.
+- Search and sort your stopwatches — by most recent, creation order, or name.
+- Light and dark themes, plus keyboard shortcuts for common actions (press `?` to see them).
 
 ## Download
 
@@ -24,7 +26,7 @@ The native desktop app is the primary way to use TrueTime, but the same UI can a
 docker compose up -d
 ```
 
-Then open `http://localhost:5001`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You redeploy a new version by rebuilding the image. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
+Then open `http://localhost:8080`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You redeploy a new version by rebuilding the image. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
 
 ## Development
 
@@ -67,7 +69,7 @@ npm test          # run once
 npm run test:watch
 ```
 
-Covers the time-math and mutual-exclusion logic in `useStopwatches` and the `formatTime` formatter.
+Covers the time-math and mutual-exclusion logic in `useStopwatches`, the `formatTime` formatter, and the sorting, theming, and UI components.
 
 ### Cutting a release
 
@@ -97,7 +99,7 @@ src/
   hooks/useStopwatches.ts   persisted state + time-math + mutual exclusion
   hooks/useLiveElapsed.ts   per-card live ticking display
   lib/formatTime.ts         HH:MM:SS formatter
-  components/               UI: list, card, create form
+  components/               UI: list, card, create form, settings, shortcuts
 src-tauri/                  Rust/Tauri native shell
 .github/workflows/          cross-platform release builds (on version tags)
 Dockerfile                  builds + serves the web version (nginx)
