@@ -1,6 +1,6 @@
 [package]
 name = "truetime"
-version = "1.2.0"
+version = "1.2.1"
 description = "TrueTime — a minimal cross-platform stopwatch app"
 edition = "2021"
 
