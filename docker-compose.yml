@@ -1,6 +1,40 @@
+name: truetime
+
 services:
   truetime:
-    build: .
-    ports:
-      - "8080:80"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: truetime:latest
+    container_name: truetime
     restart: unless-stopped
+    
+    ports:
+      - "${TRUETIME_PORT:-8080}:80"
+    
+    init: true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+        reservations:
+          memory: 32M
