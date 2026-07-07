@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96">
+  <circle cx="48" cy="48" r="34" fill="none" stroke="#2dd4bf" stroke-width="8" stroke-linecap="round" stroke-dasharray="184 214" transform="rotate(-90 48 48)"></circle>
+  <circle cx="48" cy="48" r="4" fill="#2dd4bf"></circle>
+  <text x="100" y="63" font-family="ui-sans-serif, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="42" font-weight="700" letter-spacing="-1" fill="#f1f5f9">True<tspan fill="#2dd4bf">Time</tspan></text>
+</svg>
