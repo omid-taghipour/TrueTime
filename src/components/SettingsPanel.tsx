@@ -1,10 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { useShowMilliseconds } from '../hooks/useShowMilliseconds';
+import type { Stopwatch } from '../types/stopwatch';
+import { parseStopwatchImport, serializeStopwatches } from '../lib/stopwatchIO';
 
-export function SettingsPanel() {
+interface SettingsPanelProps {
+  stopwatches: Stopwatch[];
+  onImport: (list: Stopwatch[]) => void;
+}
+
+export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { showMs, setShowMs } = useShowMilliseconds();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = useState<Stopwatch[] | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleExport = () => {
+    const json = serializeStopwatches(stopwatches);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `truetime-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    try {
+      setImportError(null);
+      setPendingImport(parseStopwatchImport(await file.text()));
+    } catch (err) {
+      setPendingImport(null);
+      setImportError(err instanceof Error ? err.message : 'Could not read that file.');
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -73,6 +106,64 @@ export function SettingsPanel() {
                     }`}
                   />
                 </button>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+                <span className="text-sm text-slate-600 dark:text-slate-300">Data</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/json"
+                  onChange={handleFilePicked}
+                  className="hidden"
+                />
+                {pendingImport ? (
+                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/40">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      Replace all {stopwatches.length} stopwatch{stopwatches.length === 1 ? '' : 'es'} with{' '}
+                      {pendingImport.length} from the file? This can't be undone.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPendingImport(null)}
+                        className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onImport(pendingImport);
+                          setPendingImport(null);
+                        }}
+                        className="flex-1 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      Export
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      Import
+                    </button>
+                  </div>
+                )}
+                {importError && (
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{importError}</p>
+                )}
               </div>
             </div>
           </div>

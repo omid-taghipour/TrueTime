@@ -109,6 +109,10 @@ export function useStopwatches() {
     setStopwatches([]);
   }, []);
 
+  const replaceStopwatches = useCallback((list: Stopwatch[]) => {
+    setStopwatches(list);
+  }, []);
+
   return {
     stopwatches,
     createStopwatch,
@@ -118,5 +122,6 @@ export function useStopwatches() {
     resetStopwatch,
     deleteStopwatch,
     clearAllStopwatches,
+    replaceStopwatches,
   };
 }

@@ -16,6 +16,7 @@ export default function App() {
     resetStopwatch,
     deleteStopwatch,
     clearAllStopwatches,
+    replaceStopwatches,
   } = useStopwatches();
 
   return (
@@ -31,7 +32,7 @@ export default function App() {
           </div>
           <div className="flex shrink-0 items-start gap-2">
             <KeyboardShortcutsHelp />
-            <SettingsPanel />
+            <SettingsPanel stopwatches={stopwatches} onImport={replaceStopwatches} />
           </div>
         </div>
 
