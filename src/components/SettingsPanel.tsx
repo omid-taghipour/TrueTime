@@ -16,6 +16,10 @@ export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<Stopwatch[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [lastExportedAt, setLastExportedAt] = useState<number | null>(() => {
+    const n = Number(localStorage.getItem('lastExportedAt'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
 
   const handleExport = async () => {
     const json = serializeStopwatches(stopwatches);
@@ -24,16 +28,20 @@ export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
     // Desktop: native Save As dialog (the <a download> click is a no-op in
     // Tauri's webview). Web/Docker build: fall back to a browser download.
     if (isTauri()) {
-      await invoke('export_stopwatches', { contents: json, defaultName });
-      return;
+      const saved = await invoke<boolean>('export_stopwatches', { contents: json, defaultName });
+      if (!saved) return; // user cancelled the dialog
+    } else {
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = defaultName;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
-    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = defaultName;
-    a.click();
-    URL.revokeObjectURL(url);
+    const now = Date.now();
+    localStorage.setItem('lastExportedAt', String(now));
+    setLastExportedAt(now);
   };
 
   const handleFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,22 +162,31 @@ export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
+                  <div className="mt-2 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                    <DataRow
+                      icon={<DownloadIcon />}
+                      title="Export backup"
+                      subtitle="Save all stopwatches to a file"
                       onClick={handleExport}
-                      className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      Export
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <DataRow
+                      icon={<UploadIcon />}
+                      title="Import backup"
+                      subtitle="Replace current data from a file"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                      Import
-                    </button>
+                      className="border-t border-slate-200 dark:border-slate-800"
+                    />
                   </div>
+                )}
+                {!pendingImport && lastExportedAt && (
+                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                    Last exported{' '}
+                    {new Date(lastExportedAt).toLocaleDateString(undefined, {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </p>
                 )}
                 {importError && (
                   <p className="mt-2 text-sm text-red-600 dark:text-red-400">{importError}</p>
@@ -180,6 +197,61 @@ export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
         </div>
       )}
     </>
+  );
+}
+
+function DataRow({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  className = '',
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${className}`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300">
+        {icon}
+      </span>
+      <span className="flex-1">
+        <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">{title}</span>
+        <span className="block text-xs text-slate-400 dark:text-slate-500">{subtitle}</span>
+      </span>
+      <ChevronRightIcon />
+    </button>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 12.5v-9m0 0L6.5 7M10 3.5 13.5 7M4 15.5h12" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 5l5 5-5 5" />
+    </svg>
   );
 }
 
