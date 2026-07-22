@@ -56,4 +56,16 @@ describe('stopwatchIO', () => {
     const bad = JSON.stringify({ stopwatches: [{ id: 'x', name: 'y' }] });
     expect(() => parseStopwatchImport(bad)).toThrow();
   });
+
+  // JSON.stringify collapses NaN/Infinity to null, so only these survive to the parser.
+  it('rejects out-of-bounds values (negative time, over-long name)', () => {
+    const cases: Partial<Stopwatch>[] = [
+      { accumulatedTime: -1 },
+      { name: 'x'.repeat(201) },
+    ];
+    for (const override of cases) {
+      const bad = JSON.stringify({ stopwatches: [{ ...paused, ...override }] });
+      expect(() => parseStopwatchImport(bad)).toThrow();
+    }
+  });
 });

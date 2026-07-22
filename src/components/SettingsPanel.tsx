@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { useShowMilliseconds } from '../hooks/useShowMilliseconds';
 import type { Stopwatch } from '../types/stopwatch';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { parseStopwatchImport, serializeStopwatches } from '../lib/stopwatchIO';
 
 interface SettingsPanelProps {
@@ -16,12 +17,21 @@ export function SettingsPanel({ stopwatches, onImport }: SettingsPanelProps) {
   const [pendingImport, setPendingImport] = useState<Stopwatch[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const json = serializeStopwatches(stopwatches);
+    const defaultName = `truetime-${new Date().toISOString().slice(0, 10)}.json`;
+
+    // Desktop: native Save As dialog (the <a download> click is a no-op in
+    // Tauri's webview). Web/Docker build: fall back to a browser download.
+    if (isTauri()) {
+      await invoke('export_stopwatches', { contents: json, defaultName });
+      return;
+    }
+
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `truetime-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = defaultName;
     a.click();
     URL.revokeObjectURL(url);
   };

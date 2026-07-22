@@ -35,13 +35,17 @@ export function serializeStopwatches(list: Stopwatch[]): string {
 function isValidStopwatch(x: unknown): x is Stopwatch {
   if (typeof x !== 'object' || x === null) return false;
   const sw = x as Record<string, unknown>;
+  const isFiniteOrNull = (v: unknown) => v === null || (typeof v === 'number' && Number.isFinite(v));
   return (
     typeof sw.id === 'string' &&
     typeof sw.name === 'string' &&
+    sw.name.length <= 200 &&
     STATUSES.includes(sw.status as StopwatchStatus) &&
     typeof sw.accumulatedTime === 'number' &&
-    (sw.lastStartedTimestamp === null || typeof sw.lastStartedTimestamp === 'number') &&
-    (sw.lastActiveAt === null || typeof sw.lastActiveAt === 'number')
+    Number.isFinite(sw.accumulatedTime) &&
+    sw.accumulatedTime >= 0 &&
+    isFiniteOrNull(sw.lastStartedTimestamp) &&
+    isFiniteOrNull(sw.lastActiveAt)
   );
 }
 
