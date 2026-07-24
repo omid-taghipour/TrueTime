@@ -109,6 +109,10 @@ Dockerfile                  builds + serves the web version (nginx)
 
 Issues and pull requests are welcome.
 
+## Privacy
+
+TrueTime collects no data and makes no network connections — everything stays on your device. See [PRIVACY.md](PRIVACY.md).
+
 ## License
 
 [MIT](LICENSE)

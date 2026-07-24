@@ -39,4 +39,4 @@ location with a new date above.
 
 ## Contact
 
-Questions about this policy: [truetime@omid-taghipour.com](truetime@omid-taghipour.com)
+Questions about this policy: [truetime@omid-taghipour.com](mailto:truetime@omid-taghipour.com)
