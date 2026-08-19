@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { formatTime } from '../lib/formatTime';
+import { parseTime } from '../lib/parseTime';
 import { useLiveElapsed } from '../hooks/useLiveElapsed';
 import { useShowMilliseconds } from '../hooks/useShowMilliseconds';
+
+const MINUTE = 60_000;
+const QUARTER_HOUR = 15 * MINUTE;
 
 interface StopwatchCardProps {
   stopwatch: Stopwatch;
   onStart: (id: string) => void;
   onPause: (id: string) => void;
   onReset: (id: string) => void;
+  onSetElapsed: (id: string, ms: number) => void;
+  onAdjustElapsed: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
 }
@@ -18,23 +24,42 @@ export function StopwatchCard({
   onStart,
   onPause,
   onReset,
+  onSetElapsed,
+  onAdjustElapsed,
   onDelete,
   onRename,
 }: StopwatchCardProps) {
   const elapsed = useLiveElapsed(stopwatch);
   const { showMs } = useShowMilliseconds();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isEditingTime, setIsEditingTime] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [draftName, setDraftName] = useState(stopwatch.name);
+  const [draftTime, setDraftTime] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
-  }, [isEditing]);
+    if (isRenaming) inputRef.current?.focus();
+  }, [isRenaming]);
+
+  useEffect(() => {
+    if (!isEditingTime) return;
+    timeInputRef.current?.focus();
+    timeInputRef.current?.select();
+  }, [isEditingTime]);
 
   const commitRename = () => {
     onRename(stopwatch.id, draftName);
-    setIsEditing(false);
+    setIsRenaming(false);
+  };
+
+  // Unparseable input reverts rather than erroring, the same way a blank
+  // rename is ignored.
+  const commitTime = () => {
+    const ms = parseTime(draftTime);
+    if (ms !== null) onSetElapsed(stopwatch.id, ms);
+    setIsEditingTime(false);
   };
 
   const isRunning = stopwatch.status === 'running';
@@ -69,7 +94,7 @@ export function StopwatchCard({
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          {isEditing ? (
+          {isRenaming ? (
             <input
               ref={inputRef}
               value={draftName}
@@ -79,7 +104,7 @@ export function StopwatchCard({
                 if (e.key === 'Enter') commitRename();
                 if (e.key === 'Escape') {
                   setDraftName(stopwatch.name);
-                  setIsEditing(false);
+                  setIsRenaming(false);
                 }
               }}
               className="flex-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-900 outline-none ring-1 ring-teal-500 dark:bg-slate-800 dark:text-slate-100"
@@ -92,7 +117,7 @@ export function StopwatchCard({
           <button
             onClick={() => {
               setDraftName(stopwatch.name);
-              setIsEditing((prev) => !prev);
+              setIsRenaming((prev) => !prev);
             }}
             aria-label="Rename stopwatch"
             className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
@@ -109,13 +134,65 @@ export function StopwatchCard({
         </div>
       )}
 
-      <p
-        className={`mt-4 font-mono text-4xl font-semibold tracking-tight tabular-nums ${
-          isRunning ? 'text-teal-600 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
-        }`}
-      >
-        {formatTime(elapsed, showMs)}
-      </p>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        {isEditingTime ? (
+          <input
+            ref={timeInputRef}
+            value={draftTime}
+            onChange={(e) => setDraftTime(e.target.value)}
+            onBlur={commitTime}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitTime();
+              if (e.key === 'Escape') setIsEditingTime(false);
+            }}
+            aria-label="Elapsed time"
+            className="w-full min-w-0 rounded-md bg-slate-100 px-2 py-0.5 font-mono text-4xl font-semibold tracking-tight tabular-nums text-slate-900 outline-none ring-1 ring-teal-500 dark:bg-slate-800 dark:text-slate-100"
+          />
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setDraftTime(formatTime(elapsed, showMs));
+                setIsEditingTime(true);
+              }}
+              aria-label="Edit elapsed time"
+              className={`-mx-1 min-w-0 truncate rounded-md px-1 font-mono text-4xl font-semibold tracking-tight tabular-nums transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                isRunning ? 'text-teal-600 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
+              }`}
+            >
+              {formatTime(elapsed, showMs)}
+            </button>
+
+            <div className="grid shrink-0 grid-cols-2 gap-x-1.5 gap-y-1">
+              <AdjustButton
+                label="Subtract 15 minutes"
+                text="−15m"
+                disabled={elapsed === 0}
+                onClick={() => onAdjustElapsed(stopwatch.id, -QUARTER_HOUR)}
+              />
+              <AdjustButton
+                label="Add 15 minutes"
+                text="+15m"
+                onClick={() => onAdjustElapsed(stopwatch.id, QUARTER_HOUR)}
+              />
+              <AdjustButton
+                label="Subtract 1 minute"
+                text="−1m"
+                fine
+                disabled={elapsed === 0}
+                onClick={() => onAdjustElapsed(stopwatch.id, -MINUTE)}
+              />
+              <AdjustButton
+                label="Add 1 minute"
+                text="+1m"
+                fine
+                onClick={() => onAdjustElapsed(stopwatch.id, MINUTE)}
+              />
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="mt-4 flex gap-2">
         <button
@@ -134,6 +211,33 @@ export function StopwatchCard({
         </button>
       </div>
     </div>
+  );
+}
+
+interface AdjustButtonProps {
+  label: string;
+  text: string;
+  /** Renders the smaller, quieter treatment used for the ±1m nudges. */
+  fine?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+function AdjustButton({ label, text, fine = false, disabled = false, onClick }: AdjustButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={`rounded-md font-medium tabular-nums transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+        fine
+          ? 'px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300'
+          : 'border border-slate-200 px-1.5 py-1 text-[11px] text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+      }`}
+    >
+      {text}
+    </button>
   );
 }
 

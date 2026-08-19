@@ -4,6 +4,7 @@ A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://t
 
 - Run multiple named stopwatches — only one can run at a time. Starting one instantly pauses whichever other one is running, capturing its elapsed time to the millisecond.
 - Time is displayed as `HH:MM:SS`, with an optional milliseconds readout.
+- Forgot to hit Start? Correct a stopwatch after the fact — click the time to type an exact value, or nudge it with the ±15m and ±1m buttons. Adjustments work on a running stopwatch without stopping it.
 - State persists across app restarts and crashes: elapsed time is computed from timestamps, not a background timer, so a running stopwatch resumes exactly where it should be when you reopen the app.
 - Search and sort your stopwatches — by most recent, creation order, or name.
 - Light and dark themes, plus keyboard shortcuts for common actions (press `?` to see them).
@@ -65,11 +66,15 @@ Output installers land in `src-tauri/target/release/bundle/`.
 ### Run tests
 
 ```sh
-npm test          # run once
+npm test                                      # run once
 npm run test:watch
+npx vitest run src/lib/formatTime.test.ts     # a single file
+npx vitest run -t 'mutual exclusion'          # a single test by name
 ```
 
 Covers the time-math and mutual-exclusion logic in `useStopwatches`, the `formatTime` formatter, and the sorting, theming, and UI components.
+
+There's no linter — `npm run build` (TypeScript + Vite) is the static check, and it runs in `strict` mode with `noUnusedLocals`/`noUnusedParameters`, so an unused import fails the build.
 
 ### Cutting a release
 
@@ -103,11 +108,12 @@ src/
 src-tauri/                  Rust/Tauri native shell
 .github/workflows/          cross-platform release builds (on version tags)
 Dockerfile                  builds + serves the web version (nginx)
+AGENTS.md                   architecture notes and conventions
 ```
 
 ## Contributing
 
-Issues and pull requests are welcome.
+Issues and pull requests are welcome. [AGENTS.md](AGENTS.md) documents the architecture and the conventions this codebase follows — chiefly that elapsed time is always derived from stored timestamps rather than ticked by a timer. It's written for AI coding agents, but it's the fastest orientation for humans too.
 
 ## Privacy
 

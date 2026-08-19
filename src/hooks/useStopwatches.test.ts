@@ -263,4 +263,128 @@ describe('useStopwatches', () => {
     expect(secondMount.current.stopwatches).toHaveLength(1);
     expect(secondMount.current.stopwatches[0].name).toBe('Persisted');
   });
+
+  it('sets the elapsed time of a paused stopwatch outright', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { result } = renderHook(() => useStopwatches());
+
+    act(() => {
+      result.current.createStopwatch('Reading');
+    });
+    const id = result.current.stopwatches[0].id;
+
+    act(() => {
+      result.current.setElapsedTime(id, 5_400_000);
+    });
+
+    expect(result.current.stopwatches[0]).toMatchObject({
+      status: 'paused',
+      accumulatedTime: 5_400_000,
+      lastStartedTimestamp: null,
+      lastActiveAt: 1_000,
+    });
+  });
+
+  it('keeps a running stopwatch running and does not double-count the current interval', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { result } = renderHook(() => useStopwatches());
+
+    act(() => {
+      result.current.createStopwatch('Reading');
+    });
+    const id = result.current.stopwatches[0].id;
+
+    act(() => {
+      result.current.startStopwatch(id);
+    });
+
+    // 10s in, correct the total to exactly one hour.
+    nowSpy.mockReturnValue(11_000);
+    act(() => {
+      result.current.setElapsedTime(id, 3_600_000);
+    });
+
+    expect(result.current.stopwatches[0]).toMatchObject({
+      status: 'running',
+      accumulatedTime: 3_600_000,
+      lastStartedTimestamp: 11_000,
+    });
+
+    // A further 5s of running adds 5s and nothing more.
+    nowSpy.mockReturnValue(16_000);
+    act(() => {
+      result.current.pauseStopwatch(id);
+    });
+
+    expect(result.current.stopwatches[0].accumulatedTime).toBe(3_605_000);
+  });
+
+  it('adjusts by a delta relative to the live elapsed time while running', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { result } = renderHook(() => useStopwatches());
+
+    act(() => {
+      result.current.createStopwatch('Reading');
+    });
+    const id = result.current.stopwatches[0].id;
+
+    act(() => {
+      result.current.startStopwatch(id);
+    });
+
+    // 10s of real running, then +15m.
+    nowSpy.mockReturnValue(11_000);
+    act(() => {
+      result.current.adjustElapsedTime(id, 900_000);
+    });
+
+    expect(result.current.stopwatches[0]).toMatchObject({
+      status: 'running',
+      accumulatedTime: 910_000,
+      lastStartedTimestamp: 11_000,
+    });
+  });
+
+  it('clamps a downward adjustment at zero and returns the stopwatch to stopped', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { result } = renderHook(() => useStopwatches());
+
+    act(() => {
+      result.current.createStopwatch('Reading');
+    });
+    const id = result.current.stopwatches[0].id;
+
+    act(() => {
+      result.current.setElapsedTime(id, 600_000);
+    });
+    act(() => {
+      result.current.adjustElapsedTime(id, -900_000);
+    });
+
+    expect(result.current.stopwatches[0]).toMatchObject({
+      status: 'stopped',
+      accumulatedTime: 0,
+      lastStartedTimestamp: null,
+    });
+  });
+
+  it('promotes a never-started stopwatch to paused when time is added', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { result } = renderHook(() => useStopwatches());
+
+    act(() => {
+      result.current.createStopwatch('Reading');
+    });
+    const id = result.current.stopwatches[0].id;
+
+    act(() => {
+      result.current.adjustElapsedTime(id, 900_000);
+    });
+
+    expect(result.current.stopwatches[0]).toMatchObject({
+      status: 'paused',
+      accumulatedTime: 900_000,
+      lastStartedTimestamp: null,
+    });
+  });
 });
