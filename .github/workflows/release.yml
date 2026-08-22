@@ -126,7 +126,7 @@ jobs:
   # No QEMU: the Dockerfile builds the static assets on the native runner and
   # the per-arch stage only copies files.
   docker-hub:
-    if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+    if: ${{ vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
