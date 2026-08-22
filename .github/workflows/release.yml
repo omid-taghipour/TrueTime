@@ -116,5 +116,6 @@ jobs:
       - name: publish to Microsoft Store
         shell: pwsh
         run: |
-          $pkg = (Get-ChildItem TrueTime-*.msix | Select-Object -First 1).FullName
-          msstore publish $pkg --appId ${{ vars.STORE_APP_ID }}
+          $pkg = Get-ChildItem TrueTime-*.msix | Select-Object -First 1
+          if (-not $pkg) { throw 'No MSIX produced by the build step.' }
+          msstore publish $pkg.FullName --appId "${{ vars.STORE_APP_ID }}"
