@@ -1,4 +1,15 @@
-# TrueTime
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-lockup-dark.svg">
+    <img src="assets/logo-lockup.svg" alt="TrueTime" width="320">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9N8R9QG4ZPWM"><img alt="Get it from the Microsoft Store" src="https://img.shields.io/badge/Microsoft%20Store-Install-0078D4?logo=microsoftstore&logoColor=white"></a>
+  <a href="https://github.com/omid-taghipour/TrueTime/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/omid-taghipour/TrueTime?display_name=tag&color=0d9488"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+</p>
 
 A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://tauri.app), React, and TypeScript. The name reflects its core guarantee: elapsed time is always derived from real timestamps, never a drifting interval — so it's exactly correct even after a crash or restart.
 
@@ -8,13 +19,23 @@ A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://t
 - Search and sort your stopwatches — by most recent, creation order, or name.
 - Light and dark themes, plus keyboard shortcuts for common actions (press `?` to see them).
 
+<p align="center">
+  <img src="assets/screenshots/01-main-light.png" alt="Stopwatch list in the light theme" width="264">
+  <img src="assets/screenshots/01-main-dark.png" alt="Stopwatch list in the dark theme" width="264">
+  <img src="assets/screenshots/02-settings-dark.png" alt="Settings panel" width="264">
+</p>
+
 ## Download
 
-Grab the installer for your OS from the [Releases page](https://github.com/omid-taghipour/TrueTime/releases):
+**Windows** — install from the [Microsoft Store](https://apps.microsoft.com/detail/9N8R9QG4ZPWM). This is the easiest option and the only one that updates itself.
+
+For every other platform, or for a standalone Windows installer, grab a build from the [Releases page](https://github.com/omid-taghipour/TrueTime/releases):
 
 - **Windows**: `.msi` or `.exe` (NSIS) installer
 - **macOS**: `.dmg`
 - **Linux**: `.deb`, `.rpm`, or `.AppImage`
+
+Builds from Releases have no in-app updater — install a newer one over the top to update. The Store version updates in the background.
 
 No Node.js or Rust needed to just run the app — those are only required if you want to build it from source.
 
