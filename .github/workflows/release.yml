@@ -63,3 +63,59 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Publishes an MSIX to the Microsoft Store. Independent of the release job above,
+  # so a Store failure never blocks the GitHub Release. No-ops until STORE_APP_ID is
+  # set, so forks and un-configured repos skip it. Requires a first manual submission
+  # in Partner Center (listing metadata) before automated updates work.
+  microsoft-store:
+    if: ${{ vars.STORE_APP_ID != '' }}
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: msix
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - name: build MSIX
+        shell: pwsh
+        env:
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: ./scripts/build-msix.ps1 -Build
+
+      - name: setup msstore CLI
+        uses: microsoft/setup-msstore-cli@v1
+
+      - name: configure msstore credentials
+        run: >
+          msstore reconfigure
+          --tenantId "${{ vars.PARTNER_CENTER_TENANT_ID }}"
+          --sellerId "${{ vars.PARTNER_CENTER_SELLER_ID }}"
+          --clientId "${{ vars.PARTNER_CENTER_CLIENT_ID }}"
+          --clientSecret "${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}"
+
+      - name: publish to Microsoft Store
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem TrueTime-*.msix | Select-Object -First 1
+          if (-not $pkg) { throw 'No MSIX produced by the build step.' }
+          msstore publish $pkg.FullName --appId "${{ vars.STORE_APP_ID }}"

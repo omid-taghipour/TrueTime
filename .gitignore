@@ -9,3 +9,6 @@ src-tauri/gen
 CLAUDE.md
 graphify-out/
 Cargo.lock
+
+# MSIX build artifacts (built by scripts/build-msix.ps1)
+*.msix
