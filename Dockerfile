@@ -1,4 +1,7 @@
-FROM node:20-alpine AS builder
+# Pinned to the build host's architecture: the output is arch-independent
+# static files, so multi-arch images need no emulation — only the nginx
+# stage below varies per platform, and it just copies files.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

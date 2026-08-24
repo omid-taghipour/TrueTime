@@ -119,3 +119,45 @@ jobs:
           $pkg = Get-ChildItem TrueTime-*.msix | Select-Object -First 1
           if (-not $pkg) { throw 'No MSIX produced by the build step.' }
           msstore publish $pkg.FullName --appId "${{ vars.STORE_APP_ID }}"
+
+  # Publishes the web (Docker) build to Docker Hub. Independent of the release
+  # job above, so a registry failure never blocks the GitHub Release. No-ops
+  # until DOCKERHUB_USERNAME is set, so forks and un-configured repos skip it.
+  # No QEMU: the Dockerfile builds the static assets on the native runner and
+  # the per-arch stage only copies files.
+  docker-hub:
+    if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # The `secrets` context is not available in a job-level `if`, so the token
+      # has to be checked here instead of in the gate above.
+      - name: require DOCKERHUB_TOKEN
+        run: test -n "${{ secrets.DOCKERHUB_TOKEN }}" || { echo "DOCKERHUB_USERNAME is set but DOCKERHUB_TOKEN is not."; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/truetime
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

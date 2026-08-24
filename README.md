@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://apps.microsoft.com/detail/9N8R9QG4ZPWM"><img alt="Get it from the Microsoft Store" src="https://img.shields.io/badge/Microsoft%20Store-Install-0078D4?logo=microsoftstore&logoColor=white"></a>
+  <a href="https://hub.docker.com/r/otpr/truetime"><img alt="Docker Hub: otpr/truetime" src="https://img.shields.io/badge/Docker%20Hub-otpr%2Ftruetime-2496ED?logo=docker&logoColor=white"></a>
   <a href="https://github.com/omid-taghipour/TrueTime/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/omid-taghipour/TrueTime?display_name=tag&color=0d9488"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
@@ -44,10 +45,14 @@ No Node.js or Rust needed to just run the app — those are only required if you
 The native desktop app is the primary way to use TrueTime, but the same UI can also run as a self-hosted web service — handy if you want it reachable from a browser on your own server or network instead of installed locally.
 
 ```sh
-docker compose up -d
+docker run -d --name truetime -p 8080:80 --restart unless-stopped otpr/truetime:latest
 ```
 
-Then open `http://localhost:8080`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You redeploy a new version by rebuilding the image. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
+Images are published to [Docker Hub](https://hub.docker.com/r/otpr/truetime) for `linux/amd64` and `linux/arm64`, so this also runs on a Raspberry Pi or an ARM server. Pin a version with `otpr/truetime:1.3`, or track everything with `:latest`.
+
+To build it yourself from a clone instead, `docker compose up -d --build` uses the hardened [docker-compose.yml](docker-compose.yml) in this repo — read-only root filesystem, no privilege escalation, a healthcheck, and resource limits.
+
+Either way, open `http://localhost:8080`. It's the same React UI served by nginx instead of wrapped in a native window — no system window/taskbar integration and no installer, just a browser tab. You update by pulling a newer tag, or by rebuilding if you went the compose route. Stopwatch state still persists per-browser via `localStorage`, exactly like the desktop app.
 
 ## Development
 
