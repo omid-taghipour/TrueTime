@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { formatTime } from '../lib/formatTime';
 import { parseTime } from '../lib/parseTime';
@@ -76,7 +76,10 @@ export function StopwatchCard({
   const parsedDraft = timeTouched ? parseTime(draftTime) : null;
 
   const save = () => {
-    if (parsedDraft !== null) onSetElapsed(stopwatch.id, parsedDraft + pendingDelta);
+    if (!timeWouldChange) {
+      // Nothing to write: leave a running stopwatch to keep accruing rather
+      // than rebasing it onto a value that reads the same.
+    } else if (parsedDraft !== null) onSetElapsed(stopwatch.id, parsedDraft + pendingDelta);
     else if (pendingDelta !== 0) onAdjustElapsed(stopwatch.id, pendingDelta);
 
     const trimmedName = draftName.trim();
@@ -85,7 +88,7 @@ export function StopwatchCard({
     closeEditor();
   };
 
-  const handleEditorKeyDown = (event: React.KeyboardEvent) => {
+  const handleEditorKeyDown = (event: KeyboardEvent) => {
     // The discard prompt owns the keyboard while it is up. Escape backs out of
     // it, and Enter must not commit the very change it is asking about.
     if (isConfirmingCancel) {
@@ -105,12 +108,19 @@ export function StopwatchCard({
   const previewElapsed = Math.max(0, (parsedDraft ?? elapsed) + pendingDelta);
   const canSubtract = previewElapsed > 0;
   const signedDelta = `${pendingDelta > 0 ? '+' : '−'}${formatTime(Math.abs(pendingDelta))}`;
+  // Compared at display precision, not raw milliseconds. The field is seeded
+  // from formatTime, so with milliseconds hidden a re-typed value parses back
+  // up to a second short of the truth — committing it would snap a running
+  // stopwatch backwards, and would print a summary reading "from" and "to" as
+  // the same string.
+  const formattedPreview = formatTime(previewElapsed, showMs);
+  const timeWouldChange = formattedPreview !== formatTime(elapsed, showMs);
   // An out-of-range entry counts as dirty even though Save would ignore it —
   // it is still typing the user would lose without being asked.
   const isDirty =
     draftName.trim() !== stopwatch.name ||
     pendingDelta !== 0 ||
-    (timeTouched && parsedDraft !== elapsed);
+    (timeTouched && (parsedDraft === null || timeWouldChange));
 
   const requestCancel = () => {
     if (isDirty) setIsConfirmingCancel(true);
@@ -206,9 +216,9 @@ export function StopwatchCard({
                 ? 'Minutes and seconds must be under 60 — time left unchanged'
                 : `Minutes and seconds must be under 60 — only ${signedDelta} applies`}
             </p>
-          ) : (parsedDraft !== null || pendingDelta !== 0) && previewElapsed !== elapsed ? (
+          ) : (parsedDraft !== null || pendingDelta !== 0) && timeWouldChange ? (
             <p role="status" className="text-xs tabular-nums text-slate-600 dark:text-slate-300">
-              Sets to {formatTime(previewElapsed, showMs)} from {formatTime(elapsed, showMs)}
+              Sets to {formattedPreview} from {formatTime(elapsed, showMs)}
             </p>
           ) : null}
 

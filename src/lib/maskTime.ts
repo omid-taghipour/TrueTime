@@ -16,10 +16,14 @@ const MAX_HOUR_DIGITS = 4;
  */
 export function maskTime(input: string, showMs = false): string {
   const width = showMs ? 8 : 6;
+  // With milliseconds hidden there is no centiseconds slot, so a pasted
+  // `01:00:00.00` would otherwise contribute its fraction as hour digits and
+  // read back as `100:00:00`. Drop everything from the first separator on.
+  const source = showMs ? input : input.split('.')[0];
   // Leading zeros are padding, not entry. Keeping them would make every new
   // digit grow the hours field instead of shifting through the mask, so a
   // fresh `00:00:00` plus one keystroke became `000:00:03`.
-  const digits = input.replace(/\D/g, '').replace(/^0+/, '').slice(0, width + MAX_HOUR_DIGITS - 2);
+  const digits = source.replace(/\D/g, '').replace(/^0+/, '').slice(0, width + MAX_HOUR_DIGITS - 2);
   const padded = digits.padStart(width, '0');
 
   const centis = showMs ? padded.slice(-2) : '';

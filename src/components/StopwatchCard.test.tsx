@@ -376,6 +376,28 @@ describe('StopwatchCard pending summary', () => {
     expect(screen.queryByText(/Sets to/)).not.toBeInTheDocument();
   });
 
+  it('does not rebase a running stopwatch onto a value that reads the same', () => {
+    // Regression: the field is seeded from formatTime, so with milliseconds
+    // hidden a re-typed value parses back up to a second short of the truth.
+    // Committing it snapped the stopwatch backwards.
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    const { onSetElapsed, onAdjustElapsed } = renderCard(
+      makeStopwatch({ status: 'running', accumulatedTime: 3_604_660, lastStartedTimestamp: 10_000 })
+    );
+
+    openEditor();
+    // Retyping the displayed value: same string, 660ms short of the truth.
+    fireEvent.change(screen.getByLabelText('Elapsed time'), { target: { value: '01:00:04.66' } });
+
+    expect(screen.queryByText(/Sets to/)).not.toBeInTheDocument();
+
+    nowSpy.mockReturnValue(12_000);
+    fireEvent.click(screen.getByText('Save'));
+
+    expect(onSetElapsed).not.toHaveBeenCalled();
+    expect(onAdjustElapsed).not.toHaveBeenCalled();
+  });
+
   it('warns that an out-of-range entry will be ignored', () => {
     renderCard(makeStopwatch({ accumulatedTime: 3_600_000 }));
 

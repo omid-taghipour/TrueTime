@@ -55,6 +55,14 @@ describe('maskTime', () => {
     expect(maskTime('000000', false)).toBe('00:00:00');
   });
 
+  it('drops a fractional part when milliseconds are hidden', () => {
+    // Regression: pasting a value copied from the ms-on view fed its
+    // centiseconds in as hour digits and read back as 100:00:00.
+    expect(maskTime('01:00:00.00', false)).toBe('01:00:00');
+    expect(maskTime('00:30:03.99', false)).toBe('00:30:03');
+    expect(maskTime('01:00:00.00', true)).toBe('01:00:00.00');
+  });
+
   it('leaves out-of-range segments alone for parseTime to reject', () => {
     expect(maskTime('9999', true)).toBe('00:00:99.99');
   });
