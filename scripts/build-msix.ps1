@@ -49,7 +49,7 @@ if ($Build) {
   try { npx --no-install tauri build } finally { Pop-Location }
   if ($LASTEXITCODE -ne 0) { throw "tauri build failed with exit code $LASTEXITCODE" }
 }
-if (-not (Test-Path $exe)) { throw "Release binary not found: $exe. Run with -Build, or 'npx tauri build' first." }
+if (-not (Test-Path $exe)) { throw "Release binary not found: $exe. Run with -Build, or 'npm install; npx tauri build' first." }
 
 # ponytail: pick the newest SDK by name sort — fine for the 10.0.* dirs, revisit if a non-numeric kit appears.
 $makeappx = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe' -ErrorAction SilentlyContinue |
