@@ -46,7 +46,7 @@ $msixVersion = ($parts[0..3] -join '.') -replace '(\d+\.\d+\.\d+)\.\d+', '$1.0'
 $exe = Join-Path $repoRoot 'src-tauri/target/release/truetime.exe'
 if ($Build) {
   Push-Location (Join-Path $repoRoot 'src-tauri')
-  try { cargo tauri build } finally { Pop-Location }
+  try { npx tauri build } finally { Pop-Location }
 }
 if (-not (Test-Path $exe)) { throw "Release binary not found: $exe. Run with -Build, or 'cargo tauri build' first." }
 
