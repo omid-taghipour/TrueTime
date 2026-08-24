@@ -126,11 +126,16 @@ jobs:
   # No QEMU: the Dockerfile builds the static assets on the native runner and
   # the per-arch stage only copies files.
   docker-hub:
-    if: ${{ vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+    if: ${{ vars.DOCKERHUB_USERNAME != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
+      # The `secrets` context is not available in a job-level `if`, so the token
+      # has to be checked here instead of in the gate above.
+      - name: require DOCKERHUB_TOKEN
+        run: test -n "${{ secrets.DOCKERHUB_TOKEN }}" || { echo "DOCKERHUB_USERNAME is set but DOCKERHUB_TOKEN is not."; exit 1; }
+
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
