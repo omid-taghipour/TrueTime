@@ -14,6 +14,8 @@ export default function App() {
     startStopwatch,
     pauseStopwatch,
     resetStopwatch,
+    setElapsedTime,
+    adjustElapsedTime,
     deleteStopwatch,
     clearAllStopwatches,
     replaceStopwatches,
@@ -45,6 +47,8 @@ export default function App() {
           onStart={startStopwatch}
           onPause={pauseStopwatch}
           onReset={resetStopwatch}
+          onSetElapsed={setElapsedTime}
+          onAdjustElapsed={adjustElapsedTime}
           onDelete={deleteStopwatch}
           onRename={renameStopwatch}
           onClearAll={clearAllStopwatches}

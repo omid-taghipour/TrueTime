@@ -16,6 +16,7 @@ A clean, fast, cross-platform desktop stopwatch app built with [Tauri](https://t
 
 - Run multiple named stopwatches — only one can run at a time. Starting one instantly pauses whichever other one is running, capturing its elapsed time to the millisecond.
 - Time is displayed as `HH:MM:SS`, with an optional milliseconds readout.
+- Forgot to hit Start? Correct a stopwatch after the fact — the pencil opens an editor where you can type an exact time or nudge it by ±1m and ±15m. Corrections apply to a running stopwatch without stopping it.
 - State persists across app restarts and crashes: elapsed time is computed from timestamps, not a background timer, so a running stopwatch resumes exactly where it should be when you reopen the app.
 - Search and sort your stopwatches — by most recent, creation order, or name.
 - Light and dark themes, plus keyboard shortcuts for common actions (press `?` to see them).
