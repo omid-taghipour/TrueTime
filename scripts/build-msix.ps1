@@ -46,9 +46,10 @@ $msixVersion = ($parts[0..3] -join '.') -replace '(\d+\.\d+\.\d+)\.\d+', '$1.0'
 $exe = Join-Path $repoRoot 'src-tauri/target/release/truetime.exe'
 if ($Build) {
   Push-Location (Join-Path $repoRoot 'src-tauri')
-  try { npx tauri build } finally { Pop-Location }
+  try { npx --no-install tauri build } finally { Pop-Location }
+  if ($LASTEXITCODE -ne 0) { throw "tauri build failed with exit code $LASTEXITCODE" }
 }
-if (-not (Test-Path $exe)) { throw "Release binary not found: $exe. Run with -Build, or 'cargo tauri build' first." }
+if (-not (Test-Path $exe)) { throw "Release binary not found: $exe. Run with -Build, or 'npx tauri build' first." }
 
 # ponytail: pick the newest SDK by name sort — fine for the 10.0.* dirs, revisit if a non-numeric kit appears.
 $makeappx = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe' -ErrorAction SilentlyContinue |
