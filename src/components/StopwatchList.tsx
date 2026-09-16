@@ -10,6 +10,8 @@ interface StopwatchListProps {
   onStart: (id: string) => void;
   onPause: (id: string) => void;
   onReset: (id: string) => void;
+  onSetElapsed: (id: string, ms: number) => void;
+  onAdjustElapsed: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onClearAll: () => void;
@@ -37,6 +39,8 @@ export function StopwatchList({
   onStart,
   onPause,
   onReset,
+  onSetElapsed,
+  onAdjustElapsed,
   onDelete,
   onRename,
   onClearAll,
@@ -201,6 +205,8 @@ export function StopwatchList({
               onStart={onStart}
               onPause={onPause}
               onReset={onReset}
+              onSetElapsed={onSetElapsed}
+              onAdjustElapsed={onAdjustElapsed}
               onDelete={onDelete}
               onRename={onRename}
             />

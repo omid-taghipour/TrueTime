@@ -5,7 +5,7 @@ const SHORTCUTS: { keys: string; description: string }[] = [
   { keys: '/', description: 'Focus the search box' },
   { keys: 'N', description: 'Focus the new stopwatch field' },
   { keys: 'Space', description: 'Start or pause the top stopwatch' },
-  { keys: 'Esc', description: 'Clear search / cancel renaming' },
+  { keys: 'Esc', description: 'Clear search / cancel editing' },
   { keys: '?', description: 'Toggle this help' },
 ];
 

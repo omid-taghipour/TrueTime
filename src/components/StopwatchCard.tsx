@@ -1,14 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
 import { formatTime } from '../lib/formatTime';
+import { parseTime } from '../lib/parseTime';
+import { maskTime } from '../lib/maskTime';
 import { useLiveElapsed } from '../hooks/useLiveElapsed';
 import { useShowMilliseconds } from '../hooks/useShowMilliseconds';
+
+const MINUTE = 60_000;
+const QUARTER_HOUR = 15 * MINUTE;
 
 interface StopwatchCardProps {
   stopwatch: Stopwatch;
   onStart: (id: string) => void;
   onPause: (id: string) => void;
   onReset: (id: string) => void;
+  onSetElapsed: (id: string, ms: number) => void;
+  onAdjustElapsed: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
 }
@@ -18,6 +25,8 @@ export function StopwatchCard({
   onStart,
   onPause,
   onReset,
+  onSetElapsed,
+  onAdjustElapsed,
   onDelete,
   onRename,
 }: StopwatchCardProps) {
@@ -25,19 +34,98 @@ export function StopwatchCard({
   const { showMs } = useShowMilliseconds();
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [draftName, setDraftName] = useState(stopwatch.name);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [draftTime, setDraftTime] = useState('');
+  // Seeding draftTime on open would otherwise make Save commit a snapshot the
+  // user never edited, silently discarding whatever a running stopwatch
+  // accrued while the editor sat open. Only a real keystroke arms the commit.
+  const [timeTouched, setTimeTouched] = useState(false);
+  const [pendingDelta, setPendingDelta] = useState(0);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
+    if (isEditing) nameInputRef.current?.focus();
   }, [isEditing]);
 
-  const commitRename = () => {
-    onRename(stopwatch.id, draftName);
+  // Digits fill in from the right, so the caret belongs at the end after every
+  // keystroke — otherwise the mask reflows the text out from under it.
+  useEffect(() => {
+    const el = timeInputRef.current;
+    if (el && document.activeElement === el) el.setSelectionRange(el.value.length, el.value.length);
+  }, [draftTime]);
+
+  const openEditor = () => {
+    setDraftName(stopwatch.name);
+    setDraftTime(formatTime(elapsed, showMs));
+    setTimeTouched(false);
+    setPendingDelta(0);
+    setIsConfirmingCancel(false);
+    setIsEditing(true);
+  };
+
+  const closeEditor = () => {
+    setIsConfirmingCancel(false);
     setIsEditing(false);
   };
 
+  // An unparseable entry yields null and falls through to the delta branch on
+  // save, reverting the same way a blank rename is ignored — but the pending
+  // line says so first, rather than letting Save appear to do nothing.
+  const parsedDraft = timeTouched ? parseTime(draftTime) : null;
+
+  const save = () => {
+    if (!timeWouldChange) {
+      // Nothing to write: leave a running stopwatch to keep accruing rather
+      // than rebasing it onto a value that reads the same.
+    } else if (parsedDraft !== null) onSetElapsed(stopwatch.id, parsedDraft + pendingDelta);
+    else if (pendingDelta !== 0) onAdjustElapsed(stopwatch.id, pendingDelta);
+
+    const trimmedName = draftName.trim();
+    if (trimmedName && trimmedName !== stopwatch.name) onRename(stopwatch.id, trimmedName);
+
+    closeEditor();
+  };
+
+  const handleEditorKeyDown = (event: KeyboardEvent) => {
+    // The discard prompt owns the keyboard while it is up. Escape backs out of
+    // it, and Enter must not commit the very change it is asking about.
+    if (isConfirmingCancel) {
+      if (event.key === 'Escape') setIsConfirmingCancel(false);
+      return;
+    }
+    if (event.key === 'Enter') save();
+    if (event.key === 'Escape') requestCancel();
+  };
+
   const isRunning = stopwatch.status === 'running';
+  // Nudges only move pendingDelta, so Cancel really does leave the stopwatch
+  // untouched — and +15m followed by −15m is exact integer arithmetic on one
+  // accumulator rather than two reads of a moving elapsed time. A typed value
+  // replaces the baseline, so the nudges bound themselves against that rather
+  // than against a live elapsed the entry has already overridden.
+  const previewElapsed = Math.max(0, (parsedDraft ?? elapsed) + pendingDelta);
+  const canSubtract = previewElapsed > 0;
+  const signedDelta = `${pendingDelta > 0 ? '+' : '−'}${formatTime(Math.abs(pendingDelta))}`;
+  // Compared at display precision, not raw milliseconds. The field is seeded
+  // from formatTime, so with milliseconds hidden a re-typed value parses back
+  // up to a second short of the truth — committing it would snap a running
+  // stopwatch backwards, and would print a summary reading "from" and "to" as
+  // the same string.
+  const formattedPreview = formatTime(previewElapsed, showMs);
+  const timeWouldChange = formattedPreview !== formatTime(elapsed, showMs);
+  // An out-of-range entry counts as dirty even though Save would ignore it —
+  // it is still typing the user would lose without being asked.
+  const isDirty =
+    draftName.trim() !== stopwatch.name ||
+    pendingDelta !== 0 ||
+    (timeTouched && (parsedDraft === null || timeWouldChange));
+
+  const requestCancel = () => {
+    if (isDirty) setIsConfirmingCancel(true);
+    else closeEditor();
+  };
 
   return (
     <div
@@ -67,73 +155,178 @@ export function StopwatchCard({
             </button>
           </div>
         </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <input
-              ref={inputRef}
-              value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitRename();
-                if (e.key === 'Escape') {
-                  setDraftName(stopwatch.name);
-                  setIsEditing(false);
-                }
-              }}
-              className="flex-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-900 outline-none ring-1 ring-teal-500 dark:bg-slate-800 dark:text-slate-100"
+      ) : isEditing ? (
+        <div className="flex flex-col gap-3">
+          <input
+            ref={nameInputRef}
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onKeyDown={handleEditorKeyDown}
+            aria-label="Stopwatch name"
+            className="rounded-md bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-900 outline-none ring-1 ring-teal-500 dark:bg-slate-800 dark:text-slate-100"
+          />
+
+          <input
+            ref={timeInputRef}
+            value={draftTime}
+            onChange={(e) => {
+              // A keystroke the mask rejects — a separator, a letter — leaves the
+              // value identical, so it must not arm the commit. Otherwise Save
+              // would write back the snapshot taken when the editor opened and
+              // destroy whatever a running stopwatch accrued in between.
+              const masked = maskTime(e.target.value, showMs);
+              if (masked === draftTime) return;
+              setDraftTime(masked);
+              setTimeTouched(true);
+            }}
+            onKeyDown={handleEditorKeyDown}
+            inputMode="numeric"
+            aria-label="Elapsed time"
+            className="w-full min-w-0 rounded-md bg-slate-100 px-2 py-1 font-mono text-2xl font-semibold tracking-tight tabular-nums text-slate-900 outline-none ring-1 ring-teal-500 dark:bg-slate-800 dark:text-slate-100"
+          />
+
+          <div className="grid grid-cols-4 gap-2">
+            <NudgeButton
+              label="Subtract 15 minutes"
+              text="−15m"
+              disabled={!canSubtract}
+              onClick={() => setPendingDelta((prev) => prev - QUARTER_HOUR)}
             />
+            <NudgeButton
+              label="Subtract 1 minute"
+              text="−1m"
+              disabled={!canSubtract}
+              onClick={() => setPendingDelta((prev) => prev - MINUTE)}
+            />
+            <NudgeButton
+              label="Add 1 minute"
+              text="+1m"
+              onClick={() => setPendingDelta((prev) => prev + MINUTE)}
+            />
+            <NudgeButton
+              label="Add 15 minutes"
+              text="+15m"
+              onClick={() => setPendingDelta((prev) => prev + QUARTER_HOUR)}
+            />
+          </div>
+
+          {timeTouched && parsedDraft === null ? (
+            <p role="status" className="text-xs tabular-nums text-amber-700 dark:text-amber-400">
+              {pendingDelta === 0
+                ? 'Minutes and seconds must be under 60 — time left unchanged'
+                : `Minutes and seconds must be under 60 — only ${signedDelta} applies`}
+            </p>
+          ) : (parsedDraft !== null || pendingDelta !== 0) && timeWouldChange ? (
+            <p role="status" className="text-xs tabular-nums text-slate-600 dark:text-slate-300">
+              Sets to {formattedPreview} from {formatTime(elapsed, showMs)}
+            </p>
+          ) : null}
+
+          {isConfirmingCancel ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-slate-600 dark:text-slate-300">Discard changes?</span>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setIsConfirmingCancel(false)}
+                  className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Keep editing
+                </button>
+                <button
+                  onClick={closeEditor}
+                  className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-500"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
           ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={save}
+                className="flex-1 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-500"
+              >
+                Save
+              </button>
+              <button
+                onClick={requestCancel}
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
             <h3 className="flex-1 truncate text-sm font-medium text-slate-700 dark:text-slate-200">
               {stopwatch.name}
             </h3>
-          )}
-          <button
-            onClick={() => {
-              setDraftName(stopwatch.name);
-              setIsEditing((prev) => !prev);
-            }}
-            aria-label="Rename stopwatch"
-            className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            <button
+              onClick={openEditor}
+              aria-label="Edit stopwatch"
+              className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            >
+              <PencilIcon />
+            </button>
+            <button
+              onClick={() => setIsConfirmingDelete(true)}
+              aria-label="Delete stopwatch"
+              className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-500"
+            >
+              <TrashIcon />
+            </button>
+          </div>
+
+          <p
+            className={`mt-4 font-mono text-4xl font-semibold tracking-tight tabular-nums ${
+              isRunning ? 'text-teal-600 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
+            }`}
           >
-            <PencilIcon />
-          </button>
-          <button
-            onClick={() => setIsConfirmingDelete(true)}
-            aria-label="Delete stopwatch"
-            className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-500"
-          >
-            <TrashIcon />
-          </button>
-        </div>
+            {formatTime(elapsed, showMs)}
+          </p>
+
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => (isRunning ? onPause(stopwatch.id) : onStart(stopwatch.id))}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors ${
+                isRunning ? 'bg-amber-500 hover:bg-amber-400' : 'bg-teal-600 hover:bg-teal-500'
+              }`}
+            >
+              {isRunning ? 'Pause' : 'Start'}
+            </button>
+            <button
+              onClick={() => onReset(stopwatch.id)}
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Reset
+            </button>
+          </div>
+        </>
       )}
-
-      <p
-        className={`mt-4 font-mono text-4xl font-semibold tracking-tight tabular-nums ${
-          isRunning ? 'text-teal-600 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
-        }`}
-      >
-        {formatTime(elapsed, showMs)}
-      </p>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          onClick={() => (isRunning ? onPause(stopwatch.id) : onStart(stopwatch.id))}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors ${
-            isRunning ? 'bg-amber-500 hover:bg-amber-400' : 'bg-teal-600 hover:bg-teal-500'
-          }`}
-        >
-          {isRunning ? 'Pause' : 'Start'}
-        </button>
-        <button
-          onClick={() => onReset(stopwatch.id)}
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          Reset
-        </button>
-      </div>
     </div>
+  );
+}
+
+interface NudgeButtonProps {
+  label: string;
+  text: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+function NudgeButton({ label, text, disabled = false, onClick }: NudgeButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className="rounded-lg border border-slate-200 px-2 py-2 text-sm font-medium tabular-nums text-slate-600 transition-colors hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+    >
+      {text}
+    </button>
   );
 }
 

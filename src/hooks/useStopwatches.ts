@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
+import { elapsedAt } from '../lib/elapsed';
 
 const STORAGE_KEY = 'stopwatches';
 
@@ -12,6 +13,28 @@ function loadStopwatches(): Stopwatch[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Rebases a stopwatch onto a corrected elapsed time.
+ *
+ * A running stopwatch has its start timestamp re-stamped to `now`: the
+ * partial interval it had accrued is already folded into `nextMs`, so
+ * leaving the old timestamp in place would count it twice.
+ *
+ * `lastActiveAt` is deliberately left alone — it drives most-recently-used
+ * ordering, and correcting a time is an edit, not a run. Writing it here
+ * would re-sort the list out from under the cursor mid-edit.
+ */
+function withElapsed(stopwatch: Stopwatch, nextMs: number, now: number): Stopwatch {
+  const clamped = Math.max(0, Math.floor(nextMs));
+  const isRunning = stopwatch.status === 'running';
+  return {
+    ...stopwatch,
+    status: isRunning ? 'running' : clamped > 0 ? 'paused' : 'stopped',
+    accumulatedTime: clamped,
+    lastStartedTimestamp: isRunning ? now : null,
+  };
 }
 
 /**
@@ -101,6 +124,22 @@ export function useStopwatches() {
     );
   }, []);
 
+  // Correcting a forgotten start: set the elapsed time outright, or nudge
+  // it by a delta. Both work on a running stopwatch without stopping it.
+  const setElapsedTime = useCallback((id: string, ms: number) => {
+    const now = Date.now();
+    setStopwatches((prev) =>
+      prev.map((sw) => (sw.id === id ? withElapsed(sw, ms, now) : sw))
+    );
+  }, []);
+
+  const adjustElapsedTime = useCallback((id: string, deltaMs: number) => {
+    const now = Date.now();
+    setStopwatches((prev) =>
+      prev.map((sw) => (sw.id === id ? withElapsed(sw, elapsedAt(sw, now) + deltaMs, now) : sw))
+    );
+  }, []);
+
   const deleteStopwatch = useCallback((id: string) => {
     setStopwatches((prev) => prev.filter((sw) => sw.id !== id));
   }, []);
@@ -120,6 +159,8 @@ export function useStopwatches() {
     startStopwatch,
     pauseStopwatch,
     resetStopwatch,
+    setElapsedTime,
+    adjustElapsedTime,
     deleteStopwatch,
     clearAllStopwatches,
     replaceStopwatches,

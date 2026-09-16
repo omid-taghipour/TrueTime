@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Stopwatch } from '../types/stopwatch';
+import { elapsedAt } from '../lib/elapsed';
 
 /**
  * Returns the live elapsed ms for a stopwatch, re-rendering on every
@@ -24,8 +25,5 @@ export function useLiveElapsed(stopwatch: Stopwatch): number {
     return () => cancelAnimationFrame(frameId);
   }, [stopwatch.status]);
 
-  if (stopwatch.status === 'running' && stopwatch.lastStartedTimestamp !== null) {
-    return stopwatch.accumulatedTime + (now - stopwatch.lastStartedTimestamp);
-  }
-  return stopwatch.accumulatedTime;
+  return elapsedAt(stopwatch, now);
 }

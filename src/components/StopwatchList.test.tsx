@@ -20,6 +20,8 @@ function handlers() {
     onStart: vi.fn(),
     onPause: vi.fn(),
     onReset: vi.fn(),
+    onSetElapsed: vi.fn(),
+    onAdjustElapsed: vi.fn(),
     onDelete: vi.fn(),
     onRename: vi.fn(),
     onClearAll: vi.fn(),
